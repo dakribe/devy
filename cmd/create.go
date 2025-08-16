@@ -1,9 +1,7 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
+	"devy/internal/config"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -13,26 +11,25 @@ var name, dir string
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{
-	Use:   "create",
-	Short: "A brief description of your command",
+	Use:   "create <name> <path>",
+	Short: "Creates a new environment",
 	Args:  cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		name := args[0]
-		dir := args[1]
-		fmt.Printf("Project created for %v in %v", name, dir)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		env := &config.EnvironmentConfig{
+			Name:       args[0],
+			ProjectDir: args[1],
+		}
+		err := config.CreateEnvironment(env)
+		if err != nil {
+			return fmt.Errorf("Unable to create environment: %v", err)
+		}
+
+		cmd.Printf("✅ Successfully created environment '%s' at '%s'\n", args[0], args[1])
+
+		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(createCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// createCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// createCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

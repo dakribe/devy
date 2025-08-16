@@ -2,12 +2,22 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 )
 
+func GetConfigDir() string {
+	return filepath.Join(os.Getenv("HOME"), ".config", "devy")
+}
+
+func GetEnvironmentsDir() string {
+	return filepath.Join(GetConfigDir(), "environments")
+}
+
 func CreateConfig() {
-	configDir := filepath.Join(os.Getenv("HOME"), ".config", "devy")
+	configDir := GetConfigDir()
+	environmentsDir := GetEnvironmentsDir()
 	configFile := filepath.Join(configDir, "config.json")
 
 	err := os.MkdirAll(configDir, 0755)
@@ -15,9 +25,15 @@ func CreateConfig() {
 		panic(err)
 	}
 
+	err = os.MkdirAll(environmentsDir, 0755)
+	if err != nil {
+		panic(err)
+	}
+
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		defaultConfig := GlobalConfig{
-			ConfigVersion: "1.0.0",
+			ConfigVersion:      "1.0.0",
+			DefaultEnvironment: "",
 		}
 
 		configData, err := json.MarshalIndent(defaultConfig, "", "  ")
@@ -33,25 +49,39 @@ func CreateConfig() {
 }
 
 type GlobalConfig struct {
-	ConfigVersion string `json:"configVersion"`
+	ConfigVersion      string `json:"configVersion"`
+	DefaultEnvironment string `json:"defaultEnvironment,omitempty"`
 }
 
-func ReadGlobalConfig() GlobalConfig {
-	configDir := filepath.Join(os.Getenv("HOME"), ".config", "devy")
+func ReadGlobalConfig() (*GlobalConfig, error) {
+	configFile := filepath.Join(GetConfigDir(), "config.json")
 	var globalConfig GlobalConfig
 
-	config, err := os.ReadFile(configDir + "config.json")
+	config, err := os.ReadFile(configFile)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	err = json.Unmarshal(config, &globalConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
 
-	return globalConfig
+	return &globalConfig, nil
 }
 
-type EnvironmentConfig struct {
-	Name       string            `json:"name"`
-	ProjectDir string            `json:"projectDir"`
-	Commands   map[string]string `json:"commands"`
+func WriteGlobalConfig(config *GlobalConfig) error {
+	configFile := filepath.Join(GetConfigDir(), "config.json")
+
+	configData, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	err = os.WriteFile(configFile, configData, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
 }
